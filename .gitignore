@@ -1,0 +1,6 @@
+*.obj
+*.sublime-workspace
+*.v12.suo
+/c8emu.exe
+/c8emu.pdb
+/imgui.ini
