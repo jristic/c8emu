@@ -105,9 +105,11 @@ int main(int argc, char** argv)
 	GLFWwindow* window = glfwCreateWindow(1280, 720, "Chip-8 Emulator", NULL, NULL);
 	glfwMakeContextCurrent(window);
 	gl3wInit();
+	
+	bool keys[16] = {};
 
 	// Setup ImGui binding
-	ImGui_ImplGlfwGL3_Init(window, true);
+	ImGui_ImplGlfwGL3_Init(window, keys, true);
 
 	FILE* File;
 	uchar rom_buf[4096];
@@ -138,7 +140,7 @@ int main(int argc, char** argv)
 
 		ImGui_ImplGlfwGL3_NewFrame();
 
-		emu_update();
+		emu_update(keys);
 
 		// Rendering
 		int display_w, display_h;
