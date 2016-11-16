@@ -93,6 +93,23 @@ static void error_callback(int error, const char* description)
 	Assert(false, "error_callback: error = %d, desc = %s", error, description);
 }
 
+bool keys[16] = {};
+bool should_run = true;
+
+DWORD WINAPI update_thread_main( LPVOID lpParam ) 
+{
+	(void)lpParam;
+	while (should_run)
+	{	
+		bool drawn = emu_update(keys);
+		
+		if (drawn)
+			Sleep(16);
+	}
+	
+	return 0;
+}
+
 int main(int argc, char** argv)
 {
 	// Setup window
@@ -106,8 +123,6 @@ int main(int argc, char** argv)
 	glfwMakeContextCurrent(window);
 	gl3wInit();
 	
-	bool keys[16] = {};
-
 	// Setup ImGui binding
 	ImGui_ImplGlfwGL3_Init(window, keys, true);
 
@@ -129,6 +144,14 @@ int main(int argc, char** argv)
 	srand((int)time(NULL));
 
 	ImVec4 clear_color = ImColor(114, 144, 154);
+	
+	CreateThread( 
+            NULL,                   // default security attributes
+            0,                      // use default stack size  
+            update_thread_main,     // thread function name
+            nullptr,                // argument to thread function 
+            0,                      // use default creation flags 
+            nullptr);               // returns the thread identifier 
 
 	// Main loop
 	while (!glfwWindowShouldClose(window))
@@ -139,8 +162,6 @@ int main(int argc, char** argv)
 			break;
 
 		ImGui_ImplGlfwGL3_NewFrame();
-
-		emu_update(keys);
 
 		// Rendering
 		int display_w, display_h;
@@ -155,6 +176,8 @@ int main(int argc, char** argv)
 
 		glfwSwapBuffers(window);
 	}
+	
+	should_run = false;
 
 	// Cleanup
 	ImGui_ImplGlfwGL3_Shutdown();

@@ -180,14 +180,26 @@ void emu_init(unsigned char* rom, int rom_size)
 			uchar vx = (op >> 8) & 0xF;
 			switch(subop)
 			{
+			case 0x07:
+				Print("LD V%X, DT", vx);
+				break;
 			case 0x0A:
 				Print("LD V%X, K", vx);
+				break;
+			case 0x15:
+				Print("LD DT, V%X", vx);
 				break;
 			case 0x18:
 				Print("LD ST, V%X", vx);
 				break;
 			case 0x1E:
 				Print("ADD I, V%X", vx);
+				break;
+			case 0x29:
+				Print("LD F, V%X", vx);
+				break;
+			case 0x33:
+				Print("LD B, V%X", vx);
 				break;
 			case 0x55:
 				Print("LD [I], V%X", vx);
@@ -254,11 +266,13 @@ void emu_init(unsigned char* rom, int rom_size)
 	glUseProgram(0);
 }
 
-void emu_update(bool* keys)
+bool emu_update(bool* keys)
 {
 	int op = (ram[pc] << 8) | ram[pc+1];
-
 	int op_category = op >> 12;
+	
+	bool drawn = false;
+	
 	switch(op_category)
 	{
 	case 0:
@@ -451,6 +465,7 @@ void emu_update(bool* keys)
 			}
 		}
 		V[0xf] = carry;
+		drawn = true;
 		pc+=2;
 		break;
 	}
@@ -514,7 +529,7 @@ void emu_update(bool* keys)
 		break;
 	}
 	
-	ImGui::ShowTestWindow();
+	return drawn;
 }
 
 void emu_render()
