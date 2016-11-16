@@ -164,7 +164,7 @@ void ImGui_ImplGlfwGL3_KeyCallback(GLFWwindow*, int key, int, int action, int mo
     
     
     {
-        bool pressed = (action == GLFW_PRESS);
+        bool pressed = (action == GLFW_PRESS) || (action == GLFW_REPEAT);
         if (key == GLFW_KEY_1) g_Keys[0x1] = pressed;
         if (key == GLFW_KEY_2) g_Keys[0x2] = pressed;
         if (key == GLFW_KEY_3) g_Keys[0x3] = pressed;
