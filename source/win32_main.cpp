@@ -163,6 +163,16 @@ int main(int argc, char** argv)
 
 		ImGui_ImplGlfwGL3_NewFrame();
 
+		ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(IM_COL32_BLACK));
+		ImGui::Begin("Display");
+		{
+			extern GLuint gl_tex;
+			ImVec2 canvas_size = ImGui::GetContentRegionAvail();
+			ImGui::Image((ImTextureID)gl_tex, canvas_size);
+		}
+		ImGui::End();
+		ImGui::PopStyleColor();
+
 		// Rendering
 		int display_w, display_h;
 		glfwGetFramebufferSize(window, &display_w, &display_h);

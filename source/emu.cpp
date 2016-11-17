@@ -534,6 +534,8 @@ bool emu_update(bool* keys)
 
 void emu_render()
 {
+	glBindTexture(GL_TEXTURE_2D, gl_tex);
+	
 	uint pixels[64*32] = {0};
 	for (int i = 0 ; i < 64*32 ; ++i)
 	{
@@ -542,18 +544,5 @@ void emu_render()
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 64, 32, 0, GL_RGBA, GL_UNSIGNED_BYTE,
 		pixels);
 	
-	// Render texture fullscreen
-	glUseProgram(quad_shader);
-	// Bind our texture in Texture Unit 0
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, gl_tex);
-	// Use quad buffer
-	glBindVertexArray(quad_vertexobject);
-	glBindBuffer(GL_ARRAY_BUFFER, quad_vertexbuffer);
-	glDrawArrays(GL_TRIANGLES, 0, 3);
-
-	// Unbind resources
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-	glUseProgram(0);
+	glBindTexture(GL_TEXTURE_2D, 0);
 }
