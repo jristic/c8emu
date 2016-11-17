@@ -165,9 +165,11 @@ int main(int argc, char** argv)
 		ImGui_ImplGlfwGL3_NewFrame();
 
 		ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(IM_COL32_BLACK));
-		ImGui::Begin("Display");
+		ImGui::Begin("Display", nullptr, ImGuiWindowFlags_NoScrollbar);
 		{
 			ImVec2 canvas_size = ImGui::GetContentRegionAvail();
+			canvas_size.x = max(floor(canvas_size.x / 64), 2) * 64;
+			canvas_size.y = canvas_size.x / 2;
 			ImGui::Image((ImTextureID)gl_tex, canvas_size);
 		}
 		ImGui::End();
