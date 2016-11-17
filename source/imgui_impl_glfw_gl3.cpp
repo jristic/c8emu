@@ -161,27 +161,6 @@ void ImGui_ImplGlfwGL3_KeyCallback(GLFWwindow*, int key, int, int action, int mo
     io.KeyShift = io.KeysDown[GLFW_KEY_LEFT_SHIFT] || io.KeysDown[GLFW_KEY_RIGHT_SHIFT];
     io.KeyAlt = io.KeysDown[GLFW_KEY_LEFT_ALT] || io.KeysDown[GLFW_KEY_RIGHT_ALT];
     io.KeySuper = io.KeysDown[GLFW_KEY_LEFT_SUPER] || io.KeysDown[GLFW_KEY_RIGHT_SUPER];
-    
-    
-    {
-        bool pressed = (action == GLFW_PRESS) || (action == GLFW_REPEAT);
-        if (key == GLFW_KEY_1) g_Keys[0x1] = pressed;
-        if (key == GLFW_KEY_2) g_Keys[0x2] = pressed;
-        if (key == GLFW_KEY_3) g_Keys[0x3] = pressed;
-        if (key == GLFW_KEY_4) g_Keys[0xC] = pressed;
-        if (key == GLFW_KEY_Q) g_Keys[0x4] = pressed;
-        if (key == GLFW_KEY_W) g_Keys[0x5] = pressed;
-        if (key == GLFW_KEY_E) g_Keys[0x6] = pressed;
-        if (key == GLFW_KEY_R) g_Keys[0xD] = pressed;
-        if (key == GLFW_KEY_A) g_Keys[0x7] = pressed;
-        if (key == GLFW_KEY_S) g_Keys[0x8] = pressed;
-        if (key == GLFW_KEY_D) g_Keys[0x9] = pressed;
-        if (key == GLFW_KEY_F) g_Keys[0xE] = pressed;
-        if (key == GLFW_KEY_Z) g_Keys[0xA] = pressed;
-        if (key == GLFW_KEY_X) g_Keys[0x0] = pressed;
-        if (key == GLFW_KEY_C) g_Keys[0xB] = pressed;
-        if (key == GLFW_KEY_V) g_Keys[0xF] = pressed;
-    }
 }
 
 void ImGui_ImplGlfwGL3_CharCallback(GLFWwindow*, unsigned int c)
@@ -320,7 +299,7 @@ void    ImGui_ImplGlfwGL3_InvalidateDeviceObjects()
     }
 }
 
-bool    ImGui_ImplGlfwGL3_Init(GLFWwindow* window, bool* keys, bool install_callbacks)
+bool    ImGui_ImplGlfwGL3_Init(GLFWwindow* window, bool install_callbacks)
 {
     g_Window = window;
 

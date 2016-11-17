@@ -93,7 +93,6 @@ static void error_callback(int error, const char* description)
 	Assert(false, "error_callback: error = %d, desc = %s", error, description);
 }
 
-bool keys[16] = {};
 bool should_run = true;
 
 DWORD WINAPI update_thread_main( LPVOID lpParam ) 
@@ -101,7 +100,7 @@ DWORD WINAPI update_thread_main( LPVOID lpParam )
 	(void)lpParam;
 	while (should_run)
 	{	
-		bool drawn = emu_update(keys);
+		bool drawn = emu_sim_step();
 		
 		if (drawn)
 			Sleep(16);
@@ -124,7 +123,7 @@ int main(int argc, char** argv)
 	gl3wInit();
 	
 	// Setup ImGui binding
-	ImGui_ImplGlfwGL3_Init(window, keys, true);
+	ImGui_ImplGlfwGL3_Init(window, true);
 
 	FILE* File;
 	uchar rom_buf[4096];
@@ -139,8 +138,7 @@ int main(int argc, char** argv)
 
 	Print("Read file: %s, bytes: %d", argv[1], bytes_read);
 
-	GLuint gl_tex;
-	emu_init(rom_buf, bytes_read, &gl_tex);
+	emu_init(rom_buf, bytes_read);
 
 	srand((int)time(NULL));
 
@@ -164,17 +162,8 @@ int main(int argc, char** argv)
 
 		ImGui_ImplGlfwGL3_NewFrame();
 
-		ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(IM_COL32_BLACK));
-		ImGui::Begin("Display", nullptr, ImGuiWindowFlags_NoScrollbar);
-		{
-			ImVec2 canvas_size = ImGui::GetContentRegionAvail();
-			canvas_size.x = max(floor(canvas_size.x / 64), 2) * 64;
-			canvas_size.y = canvas_size.x / 2;
-			ImGui::Image((ImTextureID)gl_tex, canvas_size);
-		}
-		ImGui::End();
-		ImGui::PopStyleColor();
-
+		emu_update();
+		
 		// Rendering
 		int display_w, display_h;
 		glfwGetFramebufferSize(window, &display_w, &display_h);
@@ -182,7 +171,7 @@ int main(int argc, char** argv)
 		glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		emu_render(gl_tex);
+		emu_render();
 
 		ImGui::Render();
 

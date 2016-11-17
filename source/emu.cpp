@@ -11,11 +11,14 @@ ushort pc = 0;
 
 byte screen[64*32] = {};
 
+bool keys[16] = {};
+
+GLuint display_tex;
 GLuint quad_shader;
 GLuint quad_vertexbuffer;
 GLuint quad_vertexobject;
 
-void emu_init(unsigned char* rom, int rom_size, GLuint* display_tex)
+void emu_init(unsigned char* rom, int rom_size)
 {
 	(void)rom;
 
@@ -234,8 +237,8 @@ void emu_init(unsigned char* rom, int rom_size, GLuint* display_tex)
 		quad_shader, errors);
 	Assert(success, "failed to compile quad shader: %s", errors.c_str());
 	
-	glGenTextures(1, display_tex);
-	glBindTexture(GL_TEXTURE_2D, *display_tex);
+	glGenTextures(1, &display_tex);
+	glBindTexture(GL_TEXTURE_2D, display_tex);
 	// Give an empty image to OpenGL ( the last "0" )
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 64, 32, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
 	// Use box filter
@@ -265,7 +268,7 @@ void emu_init(unsigned char* rom, int rom_size, GLuint* display_tex)
 	glUseProgram(0);
 }
 
-bool emu_update(bool* keys)
+bool emu_sim_step()
 {
 	int op = (ram[pc] << 8) | ram[pc+1];
 	int op_category = op >> 12;
@@ -531,7 +534,97 @@ bool emu_update(bool* keys)
 	return drawn;
 }
 
-void emu_render(GLuint display_tex)
+void emu_update()
+{
+	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(IM_COL32_BLACK));
+	ImGui::Begin("Display", nullptr, ImGuiWindowFlags_NoScrollbar);
+	{
+		ImVec2 canvas_size = ImGui::GetContentRegionAvail();
+		canvas_size.x = max(floor(canvas_size.x / 64), 2) * 64;
+		canvas_size.y = canvas_size.x / 2;
+		ImGui::Image((ImTextureID)display_tex, canvas_size);
+	}
+	ImGui::End();
+    
+	ImGuiIO& io = ImGui::GetIO();
+    keys[0x1] = io.KeysDown[GLFW_KEY_1];
+    keys[0x2] = io.KeysDown[GLFW_KEY_2];
+    keys[0x3] = io.KeysDown[GLFW_KEY_3];
+    keys[0xC] = io.KeysDown[GLFW_KEY_4];
+    keys[0x4] = io.KeysDown[GLFW_KEY_Q];
+    keys[0x5] = io.KeysDown[GLFW_KEY_W];
+    keys[0x6] = io.KeysDown[GLFW_KEY_E];
+    keys[0xD] = io.KeysDown[GLFW_KEY_R];
+    keys[0x7] = io.KeysDown[GLFW_KEY_A];
+    keys[0x8] = io.KeysDown[GLFW_KEY_S];
+    keys[0x9] = io.KeysDown[GLFW_KEY_D];
+    keys[0xE] = io.KeysDown[GLFW_KEY_F];
+    keys[0xA] = io.KeysDown[GLFW_KEY_Z];
+    keys[0x0] = io.KeysDown[GLFW_KEY_X];
+    keys[0xB] = io.KeysDown[GLFW_KEY_C];
+    keys[0xF] = io.KeysDown[GLFW_KEY_V];
+	
+	ImGui::Begin("Keys", nullptr,
+		ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize);
+	{
+		static bool key_repeat = false;
+		
+		ImVec2 canvas_size = ImGui::GetContentRegionAvail();
+		#define KEY_BUTTON(key)	{										\
+			bool old_key_val = keys[0x##key];							\
+			if (old_key_val) 											\
+				ImGui::PushStyleColor(ImGuiCol_Button, 					\
+					ImColor(IM_COL32_WHITE));							\
+			if (!key_repeat) {											\
+				if (ImGui::Button(#key)) keys[0x##key] = 1;				\
+			} else {													\
+				ImGui::Button(#key);									\
+				if (ImGui::IsItemActive()) keys[0x##key] = 1;			\
+			}															\
+			if (old_key_val) ImGui::PopStyleColor();					\
+		}
+		
+		// Line 1
+		KEY_BUTTON(1);
+		ImGui::SameLine();
+		KEY_BUTTON(2);
+		ImGui::SameLine();
+		KEY_BUTTON(3);
+		ImGui::SameLine();
+		KEY_BUTTON(C);
+		// Line 2
+		KEY_BUTTON(4);
+		ImGui::SameLine();
+		KEY_BUTTON(5);
+		ImGui::SameLine();
+		KEY_BUTTON(6);
+		ImGui::SameLine();
+		KEY_BUTTON(D);
+		// Line 3
+		KEY_BUTTON(7);
+		ImGui::SameLine();
+		KEY_BUTTON(8);
+		ImGui::SameLine();
+		KEY_BUTTON(9);
+		ImGui::SameLine();
+		KEY_BUTTON(E);
+		// Line 4
+		KEY_BUTTON(A);
+		ImGui::SameLine();
+		KEY_BUTTON(0);
+		ImGui::SameLine();
+		KEY_BUTTON(B);
+		ImGui::SameLine();
+		KEY_BUTTON(F);
+		
+		ImGui::Checkbox("Repeat", &key_repeat);
+	}
+	ImGui::End();
+	
+	ImGui::PopStyleColor();
+}
+
+void emu_render()
 {
 	glBindTexture(GL_TEXTURE_2D, display_tex);
 	
