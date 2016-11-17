@@ -12,11 +12,10 @@ ushort pc = 0;
 byte screen[64*32] = {};
 
 GLuint quad_shader;
-GLuint gl_tex;
 GLuint quad_vertexbuffer;
 GLuint quad_vertexobject;
 
-void emu_init(unsigned char* rom, int rom_size)
+void emu_init(unsigned char* rom, int rom_size, GLuint* display_tex)
 {
 	(void)rom;
 
@@ -235,8 +234,8 @@ void emu_init(unsigned char* rom, int rom_size)
 		quad_shader, errors);
 	Assert(success, "failed to compile quad shader: %s", errors.c_str());
 	
-	glGenTextures(1, &gl_tex);
-	glBindTexture(GL_TEXTURE_2D, gl_tex);
+	glGenTextures(1, display_tex);
+	glBindTexture(GL_TEXTURE_2D, *display_tex);
 	// Give an empty image to OpenGL ( the last "0" )
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 64, 32, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
 	// Use box filter
@@ -532,9 +531,9 @@ bool emu_update(bool* keys)
 	return drawn;
 }
 
-void emu_render()
+void emu_render(GLuint display_tex)
 {
-	glBindTexture(GL_TEXTURE_2D, gl_tex);
+	glBindTexture(GL_TEXTURE_2D, display_tex);
 	
 	uint pixels[64*32] = {0};
 	for (int i = 0 ; i < 64*32 ; ++i)

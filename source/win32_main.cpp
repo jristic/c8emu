@@ -139,7 +139,8 @@ int main(int argc, char** argv)
 
 	Print("Read file: %s, bytes: %d", argv[1], bytes_read);
 
-	emu_init(rom_buf, bytes_read);
+	GLuint gl_tex;
+	emu_init(rom_buf, bytes_read, &gl_tex);
 
 	srand((int)time(NULL));
 
@@ -166,7 +167,6 @@ int main(int argc, char** argv)
 		ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(IM_COL32_BLACK));
 		ImGui::Begin("Display");
 		{
-			extern GLuint gl_tex;
 			ImVec2 canvas_size = ImGui::GetContentRegionAvail();
 			ImGui::Image((ImTextureID)gl_tex, canvas_size);
 		}
@@ -180,7 +180,7 @@ int main(int argc, char** argv)
 		glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		emu_render();
+		emu_render(gl_tex);
 
 		ImGui::Render();
 
