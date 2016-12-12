@@ -253,11 +253,11 @@ void emu_init(unsigned char* rom, int rom_size)
 	};
 	glGenBuffers(1, &quad_vertexbuffer);
 	glGenVertexArrays(1, &quad_vertexobject);
-    glBindVertexArray(quad_vertexobject);
-    glBindBuffer(GL_ARRAY_BUFFER, quad_vertexbuffer);
-    GLuint g_AttribLocationPosition = glGetAttribLocation(quad_shader, "Position");
-    glEnableVertexAttribArray(g_AttribLocationPosition);
-    glVertexAttribPointer(g_AttribLocationPosition, 2, GL_FLOAT, GL_FALSE, 8, 0);
+	glBindVertexArray(quad_vertexobject);
+	glBindBuffer(GL_ARRAY_BUFFER, quad_vertexbuffer);
+	GLuint g_AttribLocationPosition = glGetAttribLocation(quad_shader, "Position");
+	glEnableVertexAttribArray(g_AttribLocationPosition);
+	glVertexAttribPointer(g_AttribLocationPosition, 2, GL_FLOAT, GL_FALSE, 8, 0);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(g_quad_vertex_buffer_data),
 		g_quad_vertex_buffer_data, GL_STATIC_DRAW);
 	
@@ -537,7 +537,8 @@ bool emu_sim_step()
 void emu_update()
 {
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(IM_COL32_BLACK));
-	ImGui::Begin("Display", nullptr, ImGuiWindowFlags_NoScrollbar);
+	ImGui::Begin("Display", nullptr,
+		ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoCollapse);
 	{
 		ImVec2 canvas_size = ImGui::GetContentRegionAvail();
 		canvas_size.x = max(floor(canvas_size.x / 64), 2) * 64;
@@ -545,24 +546,24 @@ void emu_update()
 		ImGui::Image((ImTextureID)display_tex, canvas_size);
 	}
 	ImGui::End();
-    
+	
 	ImGuiIO& io = ImGui::GetIO();
-    keys[0x1] = io.KeysDown[GLFW_KEY_1];
-    keys[0x2] = io.KeysDown[GLFW_KEY_2];
-    keys[0x3] = io.KeysDown[GLFW_KEY_3];
-    keys[0xC] = io.KeysDown[GLFW_KEY_4];
-    keys[0x4] = io.KeysDown[GLFW_KEY_Q];
-    keys[0x5] = io.KeysDown[GLFW_KEY_W];
-    keys[0x6] = io.KeysDown[GLFW_KEY_E];
-    keys[0xD] = io.KeysDown[GLFW_KEY_R];
-    keys[0x7] = io.KeysDown[GLFW_KEY_A];
-    keys[0x8] = io.KeysDown[GLFW_KEY_S];
-    keys[0x9] = io.KeysDown[GLFW_KEY_D];
-    keys[0xE] = io.KeysDown[GLFW_KEY_F];
-    keys[0xA] = io.KeysDown[GLFW_KEY_Z];
-    keys[0x0] = io.KeysDown[GLFW_KEY_X];
-    keys[0xB] = io.KeysDown[GLFW_KEY_C];
-    keys[0xF] = io.KeysDown[GLFW_KEY_V];
+	keys[0x1] = io.KeysDown[GLFW_KEY_1];
+	keys[0x2] = io.KeysDown[GLFW_KEY_2];
+	keys[0x3] = io.KeysDown[GLFW_KEY_3];
+	keys[0xC] = io.KeysDown[GLFW_KEY_4];
+	keys[0x4] = io.KeysDown[GLFW_KEY_Q];
+	keys[0x5] = io.KeysDown[GLFW_KEY_W];
+	keys[0x6] = io.KeysDown[GLFW_KEY_E];
+	keys[0xD] = io.KeysDown[GLFW_KEY_R];
+	keys[0x7] = io.KeysDown[GLFW_KEY_A];
+	keys[0x8] = io.KeysDown[GLFW_KEY_S];
+	keys[0x9] = io.KeysDown[GLFW_KEY_D];
+	keys[0xE] = io.KeysDown[GLFW_KEY_F];
+	keys[0xA] = io.KeysDown[GLFW_KEY_Z];
+	keys[0x0] = io.KeysDown[GLFW_KEY_X];
+	keys[0xB] = io.KeysDown[GLFW_KEY_C];
+	keys[0xF] = io.KeysDown[GLFW_KEY_V];
 	
 	ImGui::Begin("Keys", nullptr,
 		ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize);
@@ -620,6 +621,76 @@ void emu_update()
 		ImGui::Checkbox("Repeat", &key_repeat);
 	}
 	ImGui::End();
+	
+	ImGui::Begin("Memory", nullptr, 0);
+	{
+		static int bytes = 1;
+		ImGui::Text("Bytes"); ImGui::SameLine();
+		ImGui::RadioButton("1", &bytes, 1); ImGui::SameLine();
+		ImGui::RadioButton("2", &bytes, 2); ImGui::SameLine();
+		ImGui::RadioButton("4", &bytes, 4);
+		// TODO: when you change bytes per line, scroll needs to readjust
+		
+		static bool first_update = true;
+		
+		// TODO: go-to address input - can't input 0 because of strtoul
+		static int target_address = 0x200;
+		static char address_string[16] = "";
+		sprintf(address_string, "0x%.3x", target_address);
+		bool text_updated = ImGui::InputText("Address", address_string, 
+			ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase | 
+			ImGuiInputTextFlags_CharsNoBlank | ImGuiInputTextFlags_EnterReturnsTrue);
+		
+		if (text_updated)
+		{
+			int parsed = strtoul(address_string, null, 16);
+			if (parsed > 0)
+				target_address = parsed;
+		}
+		
+		bool update_address = text_updated || first_update;
+		
+		ImGui::BeginChild("mem", ImGui::GetContentRegionAvail(), false, 0);
+		{
+			for (int i = 0 ; i < 4096/bytes ; ++i)
+			{
+				if (bytes == 1)
+				{
+					ImGui::Text("0x%.3x: 0x%.2x", i, ram[i]);
+				}
+				else if (bytes == 2)
+				{
+					int value = (ram[2*i] << 8) | ram[2*i + 1];
+					ImGui::Text("0x%.3x: 0x%.4x", i*bytes, value);
+				}
+				else if (bytes == 4)
+				{
+					int value = (ram[4*i] << 24) | (ram[4*i+1] << 16) |
+						(ram[4*i+2] << 8) | ram[4*i+3];
+					ImGui::Text("0x%.3x: 0x%.8x", i*bytes, value);
+				}
+				
+				if (update_address &&
+					(i*bytes <= target_address) && (target_address < (i+1)*bytes))
+				{
+					ImGui::SetScrollHere(0.f);
+				}
+			}
+			
+		}
+		ImGui::EndChild();
+		first_update = false;
+	}
+	ImGui::End();
+	
+	// Great for reference
+	// ImGui::ShowTestWindow();
+	
+	// TODO: registers window
+	// TODO: execution control window
+	// TODO: clock speed control
+	// TODO: edit memory - dependency on flow control being implemented
+	// TODO: fix issue with key input going to game while trying to use debug tools
 	
 	ImGui::PopStyleColor();
 }
