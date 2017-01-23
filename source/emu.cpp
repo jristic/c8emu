@@ -626,9 +626,11 @@ void emu_update()
 	{
 		static int bytes = 1;
 		ImGui::Text("Bytes"); ImGui::SameLine();
-		ImGui::RadioButton("1", &bytes, 1); ImGui::SameLine();
-		ImGui::RadioButton("2", &bytes, 2); ImGui::SameLine();
-		ImGui::RadioButton("4", &bytes, 4);
+		bool bytes_updated = ImGui::RadioButton("1", &bytes, 1);
+		ImGui::SameLine();
+		bytes_updated = bytes_updated || ImGui::RadioButton("2", &bytes, 2);
+		ImGui::SameLine();
+		bytes_updated = bytes_updated || ImGui::RadioButton("4", &bytes, 4);
 		// TODO: when you change bytes per line, scroll needs to readjust
 		
 		static bool first_update = true;
@@ -648,7 +650,7 @@ void emu_update()
 				target_address = parsed;
 		}
 		
-		bool update_address = text_updated || first_update;
+		bool update_address = text_updated || bytes_updated || first_update;
 		
 		ImGui::BeginChild("mem", ImGui::GetContentRegionAvail(), false, 0);
 		{
@@ -691,6 +693,7 @@ void emu_update()
 	// TODO: clock speed control
 	// TODO: edit memory - dependency on flow control being implemented
 	// TODO: fix issue with key input going to game while trying to use debug tools
+	// TODO: Dockable windows
 	
 	ImGui::PopStyleColor();
 }
