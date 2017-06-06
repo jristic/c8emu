@@ -18,208 +18,230 @@ GLuint quad_shader;
 GLuint quad_vertexbuffer;
 GLuint quad_vertexobject;
 
-void emu_init(unsigned char* rom, int rom_size)
+// See http://devernay.free.fr/hacks/chip8/C8TECH10.HTM#font for font codes
+#define FONT_SPRITE_BASE_ADDRESS 0x0
+byte font_sprite[] = {
+	0xF0, 0x90,	0x90, 0x90,	0xF0, // "0"
+	0x20, 0x60, 0x20, 0x20,	0x70, // "1"
+	0xF0, 0x10,	0xF0, 0x80,	0xF0, // "2"
+	0xF0, 0x10,	0xF0, 0x10, 0xF0, // "3"
+	0x90, 0x90, 0xF0, 0x10,	0x10, // "4"
+	0xF0, 0x80, 0xF0, 0x10, 0xF0, // "5"
+	0xF0, 0x80, 0xF0, 0x90, 0xF0, // "6"
+	0xF0, 0x10, 0x20, 0x40, 0x40, // "7"
+	0xF0, 0x90, 0xF0, 0x90, 0xF0, // "8"
+	0xF0, 0x90, 0xF0, 0x10, 0xF0, // "9"
+	0xF0, 0x90, 0xF0, 0x90, 0x90, // "A"
+	0xE0, 0x90, 0xE0, 0x90, 0xE0, // "B"
+	0xF0, 0x80, 0x80, 0x80, 0xF0, // "C"
+	0xE0, 0x90, 0x90, 0x90, 0xE0, // "D"
+	0xF0, 0x80, 0xF0, 0x80, 0xF0, // "E"
+	0xF0, 0x80, 0xF0, 0x80, 0x80, // "F"
+};
+
+void PrintInstr(int op)
 {
-	(void)rom;
-
-	int num_ops = rom_size / 2;
-
-	Print("num ops: %d", num_ops);
-
-	for (int i = 0 ; i < num_ops ; ++i)
+	int op_category = op >> 12;
+	switch(op_category)
 	{
-		int op = (rom[2*i] << 8) | rom[2*i+1];
-
-		Printnln("0x2%.2x: %.4x = ", 2*i, op);
-
-		int op_category = op >> 12;
-		switch(op_category)
+	case 0:
+	{
+		if (op == 0x00E0)
+			Print("CLS");
+		else if (op == 0x00EE)
+			Print("RET");
+		else
+			Print("NOP");
+		break;
+	}
+	case 0x1:
+	{
+		ushort addr = (op & 0xFFF);
+		Print("JP 0x%X", addr);
+		break;
+	}
+	case 0x2:
+	{
+		ushort addr = (op & 0xFFF);
+		Print("CALL 0x%X", addr);
+		break;
+	}
+	case 0x3:
+	{
+		ushort k = (op & 0xFF);
+		uchar vx = (op >> 8) & 0xF;
+		Print("SE V%X, 0x%X", vx, k);
+		break;
+	}
+	case 0x4:
+	{
+		ushort k = (op & 0xFF);
+		uchar vx = (op >> 8) & 0xF;
+		Print("SNE V%X, 0x%X", vx, k);
+		break;
+	}
+	case 0x5:
+	{
+		// Assert((op & 0xF) == 0, "what is even going on");
+		uchar vy = (op >> 4) & 0xF;
+		uchar vx = (op >> 8) & 0xF;
+		Print("SE V%X, V%X", vx, vy);
+		break;
+	}
+	case 0x6:
+	{
+		ushort literal = (op & 0xFF);
+		uchar reg = (op >> 8) & 0xF;
+		Print("LD V%X, 0x%X", reg, literal);
+		break;
+	}
+	case 0x7:
+	{
+		ushort k = (op & 0xFF);
+		uchar vx = (op >> 8) & 0xF;
+		Print("ADD V%X, 0x%X", vx, k);
+		break;
+	}
+	case 0x8:
+	{
+		uchar sub_op = (op & 0xF);
+		uchar vy = (op >> 4) & 0xF;
+		uchar vx = (op >> 8) & 0xF;
+		switch (sub_op)
 		{
-		case 0:
-		{
-			if (op == 0x00E0)
-				Print("CLS");
-			else if (op == 0x00EE)
-				Print("RET");
-			else
-				Print("NOP");
+		case 0x0:
+			Print("LD V%X, V%X", vx, vy);
 			break;
-		}
 		case 0x1:
-		{
-			ushort addr = (op & 0xFFF);
-			Print("JP 0x%X", addr);
+			Print("OR V%X, V%X", vx, vy);
 			break;
-		}
 		case 0x2:
-		{
-			ushort addr = (op & 0xFFF);
-			Print("CALL 0x%X", addr);
+			Print("AND V%X, V%X", vx, vy);
 			break;
-		}
 		case 0x3:
-		{
-			ushort k = (op & 0xFF);
-			uchar vx = (op >> 8) & 0xF;
-			Print("SE V%X, 0x%X", vx, k);
+			Print("XOR V%X, V%X", vx, vy);
 			break;
-		}
 		case 0x4:
-		{
-			ushort k = (op & 0xFF);
-			uchar vx = (op >> 8) & 0xF;
-			Print("SNE V%X, 0x%X", vx, k);
+			Print("ADD V%X, V%X", vx, vy);
 			break;
-		}
 		case 0x5:
+			Print("SUB V%X, V%X", vx, vy);
+			break;
+		default:
+			Assert(false, "unimplemented op");
+			break;
+		}
+		break;
+	}
+	case 0x9:
+	{
+		Assert((op & 0xF) == 0, "what is even going on");
+		uchar vy = (op >> 4) & 0xF;
+		uchar vx = (op >> 8) & 0xF;
+		Print("SNE V%X, V%X", vx, vy);
+		break;
+	}
+	case 0xA:
+	{
+		ushort literal = (op & 0xFFF);
+		Print("LD I, 0x%X", literal);
+		break;
+	}
+	case 0xB:
+	{
+		ushort addr = (op & 0xFF);
+		Print("GP V0, 0x%X", addr);
+		break;
+	}
+	case 0xC:
+	{
+		ushort n = (op & 0xFF);
+		uchar vx = (op >> 8) & 0xF;
+		Print("RND V%X, 0x%X", vx, n);
+		break;
+	}
+	case 0xD:
+	{
+		uchar n = (op & 0xF);
+		uchar vy = (op >> 4) & 0xF;
+		uchar vx = (op >> 8) & 0xF;
+		Print("DRW V%X, V%X, 0x%X", vx, vy, n);
+		break;
+	}
+	case 0xE:
+	{	
+		ushort subop = op & 0xFF;
+		switch (subop)
 		{
-			Assert((op & 0xF) == 0, "what is even going on");
-			uchar vy = (op >> 4) & 0xF;
+		case 0xA1:
+		{
 			uchar vx = (op >> 8) & 0xF;
-			Print("SE V%X, V%X", vx, vy);
-			break;
-		}
-		case 0x6:
-		{
-			ushort literal = (op & 0xFF);
-			uchar reg = (op >> 8) & 0xF;
-			Print("LD V%X, 0x%X", reg, literal);
-			break;
-		}
-		case 0x7:
-		{
-			ushort k = (op & 0xFF);
-			uchar vx = (op >> 8) & 0xF;
-			Print("ADD V%X, 0x%X", vx, k);
-			break;
-		}
-		case 0x8:
-		{
-			uchar sub_op = (op & 0xF);
-			uchar vy = (op >> 4) & 0xF;
-			uchar vx = (op >> 8) & 0xF;
-			switch (sub_op)
-			{
-			case 0x0:
-				Print("LD V%X, V%X", vx, vy);
-				break;
-			case 0x1:
-				Print("OR V%X, V%X", vx, vy);
-				break;
-			case 0x2:
-				Print("AND V%X, V%X", vx, vy);
-				break;
-			case 0x3:
-				Print("XOR V%X, V%X", vx, vy);
-				break;
-			case 0x4:
-				Print("ADD V%X, V%X", vx, vy);
-				break;
-			case 0x5:
-				Print("SUB V%X, V%X", vx, vy);
-				break;
-			default:
-				Assert(false, "unimplemented op");
-				break;
-			}
-			break;
-		}
-		case 0x9:
-		{
-			Assert((op & 0xF) == 0, "what is even going on");
-			uchar vy = (op >> 4) & 0xF;
-			uchar vx = (op >> 8) & 0xF;
-			Print("SNE V%X, V%X", vx, vy);
-			break;
-		}
-		case 0xA:
-		{
-			ushort literal = (op & 0xFFF);
-			Print("LD I, 0x%X", literal);
-			break;
-		}
-		case 0xB:
-		{
-			ushort addr = (op & 0xFF);
-			Print("GP V0, 0x%X", addr);
-			break;
-		}
-		case 0xC:
-		{
-			ushort n = (op & 0xFF);
-			uchar vx = (op >> 8) & 0xF;
-			Print("RND V%X, 0x%X", vx, n);
-			break;
-		}
-		case 0xD:
-		{
-			uchar n = (op & 0xF);
-			uchar vy = (op >> 4) & 0xF;
-			uchar vx = (op >> 8) & 0xF;
-			Print("DRW V%X, V%X, 0x%X", vx, vy, n);
-			break;
-		}
-		case 0xE:
-		{	
-			ushort subop = op & 0xFF;
-			switch (subop)
-			{
-			case 0xA1:
-			{
-				uchar vx = (op >> 8) & 0xF;
-				Print("SKNP V%X", vx);
-				break;
-			}
-			default:
-				Assert(false, "unimplemented command");
-				break;
-			}
-			break;
-		}
-		case 0xF:
-		{
-			ushort subop = op & 0xFF;
-			uchar vx = (op >> 8) & 0xF;
-			switch(subop)
-			{
-			case 0x07:
-				Print("LD V%X, DT", vx);
-				break;
-			case 0x0A:
-				Print("LD V%X, K", vx);
-				break;
-			case 0x15:
-				Print("LD DT, V%X", vx);
-				break;
-			case 0x18:
-				Print("LD ST, V%X", vx);
-				break;
-			case 0x1E:
-				Print("ADD I, V%X", vx);
-				break;
-			case 0x29:
-				Print("LD F, V%X", vx);
-				break;
-			case 0x33:
-				Print("LD B, V%X", vx);
-				break;
-			case 0x55:
-				Print("LD [I], V%X", vx);
-				break;
-			case 0x65:
-				Print("LD V%X, [I]", vx);
-				break;
-			default:
-				Assert(false, "unimplemented op");
-				break;
-			}
+			Print("SKNP V%X", vx);
 			break;
 		}
 		default:
 			Assert(false, "unimplemented command");
 			break;
 		}
+		break;
 	}
+	case 0xF:
+	{
+		ushort subop = op & 0xFF;
+		uchar vx = (op >> 8) & 0xF;
+		switch(subop)
+		{
+		case 0x07:
+			Print("LD V%X, DT", vx);
+			break;
+		case 0x0A:
+			Print("LD V%X, K", vx);
+			break;
+		case 0x15:
+			Print("LD DT, V%X", vx);
+			break;
+		case 0x18:
+			Print("LD ST, V%X", vx);
+			break;
+		case 0x1E:
+			Print("ADD I, V%X", vx);
+			break;
+		case 0x29:
+			Print("LD F, V%X", vx);
+			break;
+		case 0x33:
+			Print("LD B, V%X", vx);
+			break;
+		case 0x55:
+			Print("LD [I], V%X", vx);
+			break;
+		case 0x65:
+			Print("LD V%X, [I]", vx);
+			break;
+		default:
+			Assert(false, "unimplemented op");
+			break;
+		}
+		break;
+	}
+	default:
+		Assert(false, "unimplemented command");
+		break;
+	}
+}
+
+void emu_init(unsigned char* rom, int rom_size)
+{
+	// int num_ops = rom_size / 2;
+	// for (int i = 0 ; i < num_ops ; ++i)
+	// {
+	// 	int op = (rom[2*i] << 8) | rom[2*i+1];
+	//	Printnln("0x2%.2x: %.4x = ", 2*i, op);
+	// 	PrintInstr(op);
+	// }
+	
+	// Copy font sprites into memory
+	memcpy(ram, font_sprite + FONT_SPRITE_BASE_ADDRESS, sizeof(font_sprite));
 
 	// Copy ROM into memory
 	for (int i = 0 ; i < rom_size ; ++i)
@@ -398,9 +420,29 @@ bool emu_sim_step()
 		case 0x5:
 		{
 			// SUB Vx, Vy
-			short res = V[vx] - V[vy];
-			V[0xF] = (res > 0) ? 1 : 0;
-			V[vx] = res % 0xFF;
+			V[0xF] = (V[vx] > V[vy]) ? 1 : 0;
+			V[vx] = V[vx] - V[vy];
+			break;
+		}
+		case 0x6:
+		{
+			// SHR Vx {, Vy}  -- Vy unused
+			V[0xF] = (V[vx] & 0x1) ? 1 : 0;
+			V[vx] = V[vx] >> 1;
+			break;
+		}
+		case 0x7:
+		{
+			// SUBN Vx, Vy
+			V[0xF] = (V[vy] > V[vx]) ? 1 : 0;
+			V[vx] = V[vy] - V[vx];
+			break;
+		}
+		case 0xE:
+		{
+			// SHR Vx {, Vy}  -- Vy unused
+			V[0xF] = (V[vx] & 0x80) ? 1 : 0;
+			V[vx] = V[vx] << 2;
 			break;
 		}
 		default:
@@ -472,8 +514,23 @@ bool emu_sim_step()
 		break;
 	}
 	case 0xE:
-		Assert(false, "unimplemented command");
+	{
+		ushort subop = op & 0xFF;
+		uchar vx = (op >> 8) & 0xF;
+		switch (subop)
+		{
+		case 0x9E:
+			if (keys[V[vx]])
+				pc+=2;
+			break;
+		case 0xA1:
+				
+		default:
+			Assert(false, "unimplemented command subop=0x%x, V%x", subop, vx);
+		}
+		pc+=2;
 		break;
+	}
 	case 0xF:
 	{
 		ushort subop = op & 0xFF;
@@ -496,12 +553,27 @@ bool emu_sim_step()
 				}
 			}
 			break;
+		case 0x15:
+			Assert(false, "unimplemented op");
+			break;
 		case 0x18:
 			Assert(false, "unimplemented op");
 			break;
 		case 0x1E:
 			// ADD I, Vx
 			I = I + V[vx];
+			pc+=2;
+			break;
+		case 0x29:
+			// LD F, Vx
+			I = FONT_SPRITE_BASE_ADDRESS + V[vx] * 5;
+			pc+=2;
+			break;
+		case 0x33:
+			// LD B, Vx
+			V[I] = V[vx] / 100;
+			V[I] = (V[vx] % 100) / 10;
+			V[I] = V[vx] % 10;
 			pc+=2;
 			break;
 		case 0x55:
@@ -521,7 +593,7 @@ bool emu_sim_step()
 			pc+=2;
 			break;
 		default:
-			Assert(false, "unimplemented op");
+			Assert(false, "unimplemented op 0x%x", subop);
 			break;
 		}
 		break;

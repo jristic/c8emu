@@ -134,8 +134,6 @@ int main(int argc, char** argv)
 	int bytes_read = (int)fread(rom_buf, sizeof(uchar), 4096, File);
 	Assert(feof(File), "didn't consume whole file (read=%d): %s", bytes_read, argv[1]);
 
-	Assert(bytes_read % 2 == 0, "odd number of bytes, impossible: %d", bytes_read);
-
 	Print("Read file: %s, bytes: %d", argv[1], bytes_read);
 
 	emu_init(rom_buf, bytes_read);
