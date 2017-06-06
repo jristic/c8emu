@@ -13,6 +13,9 @@ byte screen[64*32] = {};
 
 bool keys[16] = {};
 
+uchar DT = 0;
+uchar ST = 0;
+
 GLuint display_tex;
 GLuint quad_shader;
 GLuint quad_vertexbuffer;
@@ -290,8 +293,21 @@ void emu_init(unsigned char* rom, int rom_size)
 	glUseProgram(0);
 }
 
-bool emu_sim_step()
+bool emu_sim_step(int tick)
 {
+	// Update the timers if we've ticked
+	static int last_tick = tick;
+	if (tick != last_tick)
+	{
+		if (DT > 0)
+			--DT;
+		// TODO: sound for the sound timer
+		if (ST > 0)
+			--ST;
+		
+		last_tick = tick;
+	}
+	
 	int op = (ram[pc] << 8) | ram[pc+1];
 	int op_category = op >> 12;
 	
@@ -539,7 +555,8 @@ bool emu_sim_step()
 		{
 		case 0x07:
 			// LD Vx, DT
-			Assert(false, "unimplemented op");
+			V[vx] = DT;
+			pc+=2;
 			break;
 		case 0x0A:
 			// LD Vx, K
@@ -554,10 +571,12 @@ bool emu_sim_step()
 			}
 			break;
 		case 0x15:
-			Assert(false, "unimplemented op");
+			DT = V[vx];
+			pc+=2;
 			break;
 		case 0x18:
-			Assert(false, "unimplemented op");
+			ST = V[vx];
+			pc+=2;
 			break;
 		case 0x1E:
 			// ADD I, Vx
@@ -762,7 +781,7 @@ void emu_update()
 	
 	// TODO: registers window
 	// TODO: execution control window
-	// TODO: clock speed control
+	// TODO: clock speed control - games which don't use the delay timer really need this (KALEID)
 	// TODO: edit memory - dependency on flow control being implemented
 	// TODO: fix issue with key input going to game while trying to use debug tools
 	// TODO: Dockable windows

@@ -94,16 +94,14 @@ static void error_callback(int error, const char* description)
 }
 
 bool should_run = true;
+int tick = 0;
 
 DWORD WINAPI update_thread_main( LPVOID lpParam ) 
 {
 	(void)lpParam;
 	while (should_run)
 	{	
-		bool drawn = emu_sim_step();
-		
-		if (drawn)
-			Sleep(16);
+		emu_sim_step(tick);
 	}
 	
 	return 0;
@@ -174,6 +172,8 @@ int main(int argc, char** argv)
 		ImGui::Render();
 
 		glfwSwapBuffers(window);
+		
+		++tick;
 	}
 	
 	should_run = false;
