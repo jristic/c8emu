@@ -628,9 +628,9 @@ bool emu_sim_step(int tick)
 			break;
 		case 0x33:
 			// LD B, Vx
-			V[I] = V[vx] / 100;
-			V[I] = (V[vx] % 100) / 10;
-			V[I] = V[vx] % 10;
+			ram[I+0] = V[vx] / 100;
+			ram[I+1] = (V[vx] % 100) / 10;
+			ram[I+2] = V[vx] % 10;
 			pc+=2;
 			break;
 		case 0x55:
@@ -777,7 +777,9 @@ void emu_update()
 			{
 				int value = (ram[i] << 8) | ram[i + 1];
 				
-				if (i == pc)
+				// Cache pc as it could change before we get to pop
+				ushort local_pc = pc;
+				if (i == local_pc)
 					ImGui::PushStyleColor(ImGuiCol_Text, ImColor(IM_COL32(255,0,0,255)));
 				
 				char instr_buf[128];
@@ -792,7 +794,7 @@ void emu_update()
 					ImGui::Text("0x%.3x: 0x%.4x", i, value);
 				}
 				
-				if (i == pc)
+				if (i == local_pc)
 				{
 					ImGui::PopStyleColor();
 				}
