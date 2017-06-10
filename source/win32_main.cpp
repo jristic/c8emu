@@ -100,8 +100,10 @@ DWORD WINAPI update_thread_main( LPVOID lpParam )
 {
 	(void)lpParam;
 	while (should_run)
-	{	
-		emu_sim_step(tick);
+	{
+		bool should_sleep = emu_sim_step(tick);
+		if (should_sleep)
+			Sleep(16);
 	}
 	
 	return 0;
@@ -119,6 +121,8 @@ int main(int argc, char** argv)
 	GLFWwindow* window = glfwCreateWindow(1280, 720, "Chip-8 Emulator", NULL, NULL);
 	glfwMakeContextCurrent(window);
 	gl3wInit();
+	
+	glfwSwapInterval(1);
 	
 	// Setup ImGui binding
 	ImGui_ImplGlfwGL3_Init(window, true);

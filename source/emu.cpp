@@ -16,6 +16,10 @@ bool keys[16] = {};
 uchar DT = 0;
 uchar ST = 0;
 
+int gFramesToSim = 0;
+int gUpdateTargetAddress = false;
+int gTargetAddress = 0x200;
+
 GLuint display_tex;
 GLuint quad_shader;
 GLuint quad_vertexbuffer;
@@ -323,6 +327,15 @@ void emu_init(unsigned char* rom, int rom_size)
 
 bool emu_sim_step(int tick)
 {
+	if (gFramesToSim == 0)
+	{
+		return true;
+	}
+	else if (gFramesToSim > 0)
+	{
+		--gFramesToSim;
+	}
+	
 	// Update the timers if we've ticked
 	static int last_tick = tick;
 	if (tick != last_tick)
@@ -338,8 +351,6 @@ bool emu_sim_step(int tick)
 	
 	int op = (ram[pc] << 8) | ram[pc+1];
 	int op_category = op >> 12;
-	
-	bool drawn = false;
 	
 	switch(op_category)
 	{
@@ -553,7 +564,6 @@ bool emu_sim_step(int tick)
 			}
 		}
 		V[0xf] = carry;
-		drawn = true;
 		pc+=2;
 		break;
 	}
@@ -650,15 +660,25 @@ bool emu_sim_step(int tick)
 		break;
 	}
 	
-	return drawn;
+	if (gUpdateTargetAddress)
+	{
+		gTargetAddress = pc;
+		gUpdateTargetAddress = false;
+	}
+	
+	return false;
 }
 
 void emu_update()
 {
+	bool display_has_focus = false;
+	
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(IM_COL32_BLACK));
 	ImGui::Begin("Display", nullptr,
 		ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoCollapse);
 	{
+		display_has_focus = ImGui::IsWindowFocused();
+		
 		ImVec2 canvas_size = ImGui::GetContentRegionAvail();
 		canvas_size.x = max(floor(canvas_size.x / 64), 2) * 64;
 		canvas_size.y = canvas_size.x / 2;
@@ -667,22 +687,25 @@ void emu_update()
 	ImGui::End();
 	
 	ImGuiIO& io = ImGui::GetIO();
-	keys[0x1] = io.KeysDown[GLFW_KEY_1];
-	keys[0x2] = io.KeysDown[GLFW_KEY_2];
-	keys[0x3] = io.KeysDown[GLFW_KEY_3];
-	keys[0xC] = io.KeysDown[GLFW_KEY_4];
-	keys[0x4] = io.KeysDown[GLFW_KEY_Q];
-	keys[0x5] = io.KeysDown[GLFW_KEY_W];
-	keys[0x6] = io.KeysDown[GLFW_KEY_E];
-	keys[0xD] = io.KeysDown[GLFW_KEY_R];
-	keys[0x7] = io.KeysDown[GLFW_KEY_A];
-	keys[0x8] = io.KeysDown[GLFW_KEY_S];
-	keys[0x9] = io.KeysDown[GLFW_KEY_D];
-	keys[0xE] = io.KeysDown[GLFW_KEY_F];
-	keys[0xA] = io.KeysDown[GLFW_KEY_Z];
-	keys[0x0] = io.KeysDown[GLFW_KEY_X];
-	keys[0xB] = io.KeysDown[GLFW_KEY_C];
-	keys[0xF] = io.KeysDown[GLFW_KEY_V];
+	if (display_has_focus)
+	{
+		keys[0x1] = io.KeysDown[GLFW_KEY_1];
+		keys[0x2] = io.KeysDown[GLFW_KEY_2];
+		keys[0x3] = io.KeysDown[GLFW_KEY_3];
+		keys[0xC] = io.KeysDown[GLFW_KEY_4];
+		keys[0x4] = io.KeysDown[GLFW_KEY_Q];
+		keys[0x5] = io.KeysDown[GLFW_KEY_W];
+		keys[0x6] = io.KeysDown[GLFW_KEY_E];
+		keys[0xD] = io.KeysDown[GLFW_KEY_R];
+		keys[0x7] = io.KeysDown[GLFW_KEY_A];
+		keys[0x8] = io.KeysDown[GLFW_KEY_S];
+		keys[0x9] = io.KeysDown[GLFW_KEY_D];
+		keys[0xE] = io.KeysDown[GLFW_KEY_F];
+		keys[0xA] = io.KeysDown[GLFW_KEY_Z];
+		keys[0x0] = io.KeysDown[GLFW_KEY_X];
+		keys[0xB] = io.KeysDown[GLFW_KEY_C];
+		keys[0xF] = io.KeysDown[GLFW_KEY_V];
+	}
 	
 	ImGui::Begin("Keys", nullptr,
 		ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize);
@@ -743,27 +766,19 @@ void emu_update()
 	
 	ImGui::Begin("Instruction View", nullptr, 0);
 	{
-		static int target_address = 0x200;
-		static char address_string[16] = "";
-		sprintf(address_string, "0x%.3x", target_address);
-		bool text_updated = ImGui::InputText("Address", address_string, 
-			ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase | 
-			ImGuiInputTextFlags_CharsNoBlank | ImGuiInputTextFlags_EnterReturnsTrue);
-		
-		if (text_updated)
-		{
-			int parsed = strtoul(address_string, null, 16);
-			if (parsed > 0)
-				target_address = parsed;
-		}
-		
-		bool update_address = text_updated;
+		static int last_target_address = gTargetAddress;
+		bool update_address = last_target_address != gTargetAddress;
+		last_target_address = gTargetAddress;
 		
 		ImGui::BeginChild("mem", ImGui::GetContentRegionAvail(), false, 0);
 		{
-			for (int i = 0x200 ; i < 0x600 ; i+=2)
+			int start_address = 0x200 + (gTargetAddress & 0x1);
+			for (int i = start_address ; i < 0x600 - 1 ; i+=2)
 			{
 				int value = (ram[i] << 8) | ram[i + 1];
+				
+				if (i == pc)
+					ImGui::PushStyleColor(ImGuiCol_Text, ImColor(IM_COL32(255,0,0,255)));
 				
 				char instr_buf[128];
 				bool valid_instr = SPrintInstr(value, instr_buf);
@@ -777,8 +792,14 @@ void emu_update()
 					ImGui::Text("0x%.3x: 0x%.4x", i, value);
 				}
 				
+				if (i == pc)
+				{
+					ImGui::PopStyleColor();
+				}
+				
 				if (update_address &&
-					(i <= target_address) && (target_address < (i+1)))
+					(i <= gTargetAddress) && (gTargetAddress < (i+1)) &&
+					!ImGui::IsItemVisible())
 				{
 					ImGui::SetScrollHere(0.f);
 				}
@@ -789,14 +810,47 @@ void emu_update()
 	}
 	ImGui::End();
 	
+	
+	ImGui::Begin("Registers", nullptr, 0);
+	{
+		ImGui::Text("PC: 0x%.3x", pc);
+		ImGui::Text("I: 0x%x", I);
+		for (int i = 0 ; i < 16 ; ++i)
+		{
+			ImGui::Text("V%x = 0x%.2x", i, V[i]);
+			if ((i & 1) == 0)
+			{
+				ImGui::SameLine();
+			}
+		}
+	}
+	ImGui::End();
+	
+	ImGui::Begin("Execution Control", nullptr, 0);
+	{
+		if (ImGui::Button("Play"))
+			gFramesToSim = -1;
+		ImGui::SameLine();
+		if (ImGui::Button("Pause"))
+		{
+			gFramesToSim = 0;
+			gUpdateTargetAddress = true;
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Step"))
+		{
+			gFramesToSim = 1;
+			gUpdateTargetAddress = true;
+		}
+	}
+	ImGui::End();
+	
 	// Great for reference
 	// ImGui::ShowTestWindow();
 	
-	// TODO: registers window
-	// TODO: execution control window
 	// TODO: clock speed control - games which don't use the delay timer really need this (KALEID)
 	// TODO: edit memory - dependency on flow control being implemented
-	// TODO: fix issue with key input going to game while trying to use debug tools
+	// TODO: fix issue with key input going to game while trying to use debug tools - check focus on game window
 	// TODO: Dockable windows
 	
 	ImGui::PopStyleColor();
