@@ -42,7 +42,7 @@ byte font_sprite[] = {
 	0xF0, 0x80, 0xF0, 0x80, 0x80, // "F"
 };
 
-void PrintInstr(int op)
+bool SPrintInstr(int op, char* buf)
 {
 	int op_category = op >> 12;
 	switch(op_category)
@@ -50,37 +50,37 @@ void PrintInstr(int op)
 	case 0:
 	{
 		if (op == 0x00E0)
-			Print("CLS");
+			SPrint(buf, "CLS");
 		else if (op == 0x00EE)
-			Print("RET");
+			SPrint(buf, "RET");
 		else
-			Print("NOP");
+			SPrint(buf, "NOP");
 		break;
 	}
 	case 0x1:
 	{
 		ushort addr = (op & 0xFFF);
-		Print("JP 0x%X", addr);
+		SPrint(buf, "JP 0x%X", addr);
 		break;
 	}
 	case 0x2:
 	{
 		ushort addr = (op & 0xFFF);
-		Print("CALL 0x%X", addr);
+		SPrint(buf, "CALL 0x%X", addr);
 		break;
 	}
 	case 0x3:
 	{
 		ushort k = (op & 0xFF);
 		uchar vx = (op >> 8) & 0xF;
-		Print("SE V%X, 0x%X", vx, k);
+		SPrint(buf, "SE V%X, 0x%X", vx, k);
 		break;
 	}
 	case 0x4:
 	{
 		ushort k = (op & 0xFF);
 		uchar vx = (op >> 8) & 0xF;
-		Print("SNE V%X, 0x%X", vx, k);
+		SPrint(buf, "SNE V%X, 0x%X", vx, k);
 		break;
 	}
 	case 0x5:
@@ -88,21 +88,21 @@ void PrintInstr(int op)
 		// Assert((op & 0xF) == 0, "what is even going on");
 		uchar vy = (op >> 4) & 0xF;
 		uchar vx = (op >> 8) & 0xF;
-		Print("SE V%X, V%X", vx, vy);
+		SPrint(buf, "SE V%X, V%X", vx, vy);
 		break;
 	}
 	case 0x6:
 	{
 		ushort literal = (op & 0xFF);
 		uchar reg = (op >> 8) & 0xF;
-		Print("LD V%X, 0x%X", reg, literal);
+		SPrint(buf, "LD V%X, 0x%X", reg, literal);
 		break;
 	}
 	case 0x7:
 	{
 		ushort k = (op & 0xFF);
 		uchar vx = (op >> 8) & 0xF;
-		Print("ADD V%X, 0x%X", vx, k);
+		SPrint(buf, "ADD V%X, 0x%X", vx, k);
 		break;
 	}
 	case 0x8:
@@ -113,54 +113,63 @@ void PrintInstr(int op)
 		switch (sub_op)
 		{
 		case 0x0:
-			Print("LD V%X, V%X", vx, vy);
+			SPrint(buf, "LD V%X, V%X", vx, vy);
 			break;
 		case 0x1:
-			Print("OR V%X, V%X", vx, vy);
+			SPrint(buf, "OR V%X, V%X", vx, vy);
 			break;
 		case 0x2:
-			Print("AND V%X, V%X", vx, vy);
+			SPrint(buf, "AND V%X, V%X", vx, vy);
 			break;
 		case 0x3:
-			Print("XOR V%X, V%X", vx, vy);
+			SPrint(buf, "XOR V%X, V%X", vx, vy);
 			break;
 		case 0x4:
-			Print("ADD V%X, V%X", vx, vy);
+			SPrint(buf, "ADD V%X, V%X", vx, vy);
 			break;
 		case 0x5:
-			Print("SUB V%X, V%X", vx, vy);
+			SPrint(buf, "SUB V%X, V%X", vx, vy);
+			break;
+		case 0x6:
+			SPrint(buf, "SHR V%X {, V%X}", vx, vy);
+			break;
+		case 0x7:
+			SPrint(buf, "SUBN V%X, V%X", vx, vy);
+			break;
+		case 0xE:
+			SPrint(buf, "SHL V%X{, V%X}", vx, vy);
 			break;
 		default:
-			Assert(false, "unimplemented op");
-			break;
+			return false;
 		}
 		break;
 	}
 	case 0x9:
 	{
-		Assert((op & 0xF) == 0, "what is even going on");
+		if ((op & 0xF) != 0)
+			return false;
 		uchar vy = (op >> 4) & 0xF;
 		uchar vx = (op >> 8) & 0xF;
-		Print("SNE V%X, V%X", vx, vy);
+		SPrint(buf, "SNE V%X, V%X", vx, vy);
 		break;
 	}
 	case 0xA:
 	{
 		ushort literal = (op & 0xFFF);
-		Print("LD I, 0x%X", literal);
+		SPrint(buf, "LD I, 0x%X", literal);
 		break;
 	}
 	case 0xB:
 	{
 		ushort addr = (op & 0xFF);
-		Print("GP V0, 0x%X", addr);
+		SPrint(buf, "JP V0, 0x%X", addr);
 		break;
 	}
 	case 0xC:
 	{
 		ushort n = (op & 0xFF);
 		uchar vx = (op >> 8) & 0xF;
-		Print("RND V%X, 0x%X", vx, n);
+		SPrint(buf, "RND V%X, 0x%X", vx, n);
 		break;
 	}
 	case 0xD:
@@ -168,7 +177,7 @@ void PrintInstr(int op)
 		uchar n = (op & 0xF);
 		uchar vy = (op >> 4) & 0xF;
 		uchar vx = (op >> 8) & 0xF;
-		Print("DRW V%X, V%X, 0x%X", vx, vy, n);
+		SPrint(buf, "DRW V%X, V%X, 0x%X", vx, vy, n);
 		break;
 	}
 	case 0xE:
@@ -176,15 +185,20 @@ void PrintInstr(int op)
 		ushort subop = op & 0xFF;
 		switch (subop)
 		{
+		case 0x9E:
+		{
+			uchar vx = (op >> 8) & 0xF;
+			SPrint(buf, "SKP V%X", vx);
+			break;
+		}
 		case 0xA1:
 		{
 			uchar vx = (op >> 8) & 0xF;
-			Print("SKNP V%X", vx);
+			SPrint(buf, "SKNP V%X", vx);
 			break;
 		}
 		default:
-			Assert(false, "unimplemented command");
-			break;
+			return false;
 		}
 		break;
 	}
@@ -195,51 +209,65 @@ void PrintInstr(int op)
 		switch(subop)
 		{
 		case 0x07:
-			Print("LD V%X, DT", vx);
+			SPrint(buf, "LD V%X, DT", vx);
 			break;
 		case 0x0A:
-			Print("LD V%X, K", vx);
+			SPrint(buf, "LD V%X, K", vx);
 			break;
 		case 0x15:
-			Print("LD DT, V%X", vx);
+			SPrint(buf, "LD DT, V%X", vx);
 			break;
 		case 0x18:
-			Print("LD ST, V%X", vx);
+			SPrint(buf, "LD ST, V%X", vx);
 			break;
 		case 0x1E:
-			Print("ADD I, V%X", vx);
+			SPrint(buf, "ADD I, V%X", vx);
 			break;
 		case 0x29:
-			Print("LD F, V%X", vx);
+			SPrint(buf, "LD F, V%X", vx);
 			break;
 		case 0x33:
-			Print("LD B, V%X", vx);
+			SPrint(buf, "LD B, V%X", vx);
 			break;
 		case 0x55:
-			Print("LD [I], V%X", vx);
+			SPrint(buf, "LD [I], V%X", vx);
 			break;
 		case 0x65:
-			Print("LD V%X, [I]", vx);
+			SPrint(buf, "LD V%X, [I]", vx);
 			break;
 		default:
-			Assert(false, "unimplemented op");
-			break;
+			return false;
 		}
 		break;
 	}
 	default:
-		Assert(false, "unimplemented command");
-		break;
+		return false;
 	}
+	
+	return true;
+}
+
+bool PrintInstr(int op)
+{
+	char buf[1024];
+	bool valid = SPrintInstr(op, buf);
+	
+	if (valid)
+		Print("%s", buf);
+	else
+		Print("");
+	
+	return valid;
 }
 
 void emu_init(unsigned char* rom, int rom_size)
 {
+	// // Print ROM contents for debug purposes
 	// int num_ops = rom_size / 2;
 	// for (int i = 0 ; i < num_ops ; ++i)
 	// {
 	// 	int op = (rom[2*i] << 8) | rom[2*i+1];
-	//	Printnln("0x2%.2x: %.4x = ", 2*i, op);
+	// 	Printnln("0x%.3x: %.4x = ", 0x200 + 2*i, op);
 	// 	PrintInstr(op);
 	// }
 	
@@ -713,20 +741,8 @@ void emu_update()
 	}
 	ImGui::End();
 	
-	ImGui::Begin("Memory", nullptr, 0);
+	ImGui::Begin("Instruction View", nullptr, 0);
 	{
-		static int bytes = 1;
-		ImGui::Text("Bytes"); ImGui::SameLine();
-		bool bytes_updated = ImGui::RadioButton("1", &bytes, 1);
-		ImGui::SameLine();
-		bytes_updated = bytes_updated || ImGui::RadioButton("2", &bytes, 2);
-		ImGui::SameLine();
-		bytes_updated = bytes_updated || ImGui::RadioButton("4", &bytes, 4);
-		// TODO: when you change bytes per line, scroll needs to readjust
-		
-		static bool first_update = true;
-		
-		// TODO: go-to address input - can't input 0 because of strtoul
 		static int target_address = 0x200;
 		static char address_string[16] = "";
 		sprintf(address_string, "0x%.3x", target_address);
@@ -741,30 +757,28 @@ void emu_update()
 				target_address = parsed;
 		}
 		
-		bool update_address = text_updated || bytes_updated || first_update;
+		bool update_address = text_updated;
 		
 		ImGui::BeginChild("mem", ImGui::GetContentRegionAvail(), false, 0);
 		{
-			for (int i = 0 ; i < 4096/bytes ; ++i)
+			for (int i = 0x200 ; i < 0x600 ; i+=2)
 			{
-				if (bytes == 1)
+				int value = (ram[i] << 8) | ram[i + 1];
+				
+				char instr_buf[128];
+				bool valid_instr = SPrintInstr(value, instr_buf);
+				
+				if (valid_instr)
 				{
-					ImGui::Text("0x%.3x: 0x%.2x", i, ram[i]);
+					ImGui::Text("0x%.3x: 0x%.4x - %s", i, value, instr_buf);
 				}
-				else if (bytes == 2)
+				else
 				{
-					int value = (ram[2*i] << 8) | ram[2*i + 1];
-					ImGui::Text("0x%.3x: 0x%.4x", i*bytes, value);
-				}
-				else if (bytes == 4)
-				{
-					int value = (ram[4*i] << 24) | (ram[4*i+1] << 16) |
-						(ram[4*i+2] << 8) | ram[4*i+3];
-					ImGui::Text("0x%.3x: 0x%.8x", i*bytes, value);
+					ImGui::Text("0x%.3x: 0x%.4x", i, value);
 				}
 				
 				if (update_address &&
-					(i*bytes <= target_address) && (target_address < (i+1)*bytes))
+					(i <= target_address) && (target_address < (i+1)))
 				{
 					ImGui::SetScrollHere(0.f);
 				}
@@ -772,7 +786,6 @@ void emu_update()
 			
 		}
 		ImGui::EndChild();
-		first_update = false;
 	}
 	ImGui::End();
 	

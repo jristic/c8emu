@@ -43,11 +43,11 @@ void Printnln(const char *str, ...)
 	OutputDebugString(buf);
 }
 
-void SPrint(char* buf, int buf_size, const char *str, ...)
+void SPrint(char* buf, const char *str, ...)
 {
 	va_list ptr;
 	va_start(ptr,str);
-	vsprintf_s(buf,buf_size,str,ptr);
+	vsprintf(buf,str,ptr);
 	va_end(ptr);
 }
 
@@ -63,7 +63,7 @@ typedef unsigned char byte;
 	do { 												\
 		if (!(expression)) {							\
 			char buf[512];								\
-			SPrint(buf, 512,							\
+			SPrint(buf,									\
 				"/* ---- Assert ---- */ \n"				\
 				"LOCATION:  %s@%d		\n"				\
 				"CONDITION:  %s			\n"				\
