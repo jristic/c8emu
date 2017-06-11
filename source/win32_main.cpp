@@ -12,7 +12,6 @@
 #include <time.h>
 
 #include "emu.h"
-#include "shader.h"
 
 void Print(const char *str, ...)
 {
@@ -190,7 +189,6 @@ int main(int argc, char** argv)
 }
 
 #include "emu.cpp"
-#include "shader.cpp"
 
 #include "imgui.cpp"
 #include "imgui_draw.cpp"

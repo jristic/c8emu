@@ -21,9 +21,6 @@ int gUpdateTargetAddress = false;
 int gTargetAddress = 0x200;
 
 GLuint display_tex;
-GLuint quad_shader;
-GLuint quad_vertexbuffer;
-GLuint quad_vertexobject;
 
 // See http://devernay.free.fr/hacks/chip8/C8TECH10.HTM#font for font codes
 #define FONT_SPRITE_BASE_ADDRESS 0x0
@@ -287,13 +284,6 @@ void emu_init(unsigned char* rom, int rom_size)
 	pc = 0x200;
 	
 	
-	/* ------------------ Setup opengl resources ------------------ */
-	// Create and compile our GLSL program from the shaders
-	std::string errors;
-	bool success = make_shader_program("shader/quad.vert", "shader/quad.frag",
-		quad_shader, errors);
-	Assert(success, "failed to compile quad shader: %s", errors.c_str());
-	
 	glGenTextures(1, &display_tex);
 	glBindTexture(GL_TEXTURE_2D, display_tex);
 	// Give an empty image to OpenGL ( the last "0" )
@@ -301,28 +291,6 @@ void emu_init(unsigned char* rom, int rom_size)
 	// Use box filter
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	
-	// Setup vertex buffers and shader for rendering texture to screen
-	const GLfloat g_quad_vertex_buffer_data[] = {
-		-1.0f, -1.0f,
-		3.0f, -1.0f,
-		-1.0f,  3.0f,
-	};
-	glGenBuffers(1, &quad_vertexbuffer);
-	glGenVertexArrays(1, &quad_vertexobject);
-	glBindVertexArray(quad_vertexobject);
-	glBindBuffer(GL_ARRAY_BUFFER, quad_vertexbuffer);
-	GLuint g_AttribLocationPosition = glGetAttribLocation(quad_shader, "Position");
-	glEnableVertexAttribArray(g_AttribLocationPosition);
-	glVertexAttribPointer(g_AttribLocationPosition, 2, GL_FLOAT, GL_FALSE, 8, 0);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(g_quad_vertex_buffer_data),
-		g_quad_vertex_buffer_data, GL_STATIC_DRAW);
-	
-	GLuint tex_id = glGetUniformLocation(quad_shader, "inputTex");
-	glUseProgram(quad_shader);
-	// Set our "inputTex" sampler to user Texture Unit 0
-	glUniform1i(tex_id, 0);
-	glUseProgram(0);
 }
 
 bool emu_sim_step(int tick)
@@ -342,7 +310,6 @@ bool emu_sim_step(int tick)
 	{
 		if (DT > 0)
 			--DT;
-		// TODO: sound for the sound timer
 		if (ST > 0)
 			--ST;
 		
@@ -578,7 +545,9 @@ bool emu_sim_step(int tick)
 				pc+=2;
 			break;
 		case 0xA1:
-				
+			if (!keys[V[vx]])
+				pc+=2;
+			break;
 		default:
 			Assert(false, "unimplemented command subop=0x%x, V%x", subop, vx);
 		}
@@ -773,11 +742,11 @@ void emu_update()
 		ImGui::BeginChild("mem", ImGui::GetContentRegionAvail(), false, 0);
 		{
 			int start_address = 0x200 + (gTargetAddress & 0x1);
-			for (int i = start_address ; i < 0x600 - 1 ; i+=2)
+			for (int i = start_address ; i < 0x1000 - 1 ; i+=2)
 			{
 				int value = (ram[i] << 8) | ram[i + 1];
 				
-				// Cache pc as it could change before we get to pop
+				// Cache PC as it could change before we get to pop
 				ushort local_pc = pc;
 				if (i == local_pc)
 					ImGui::PushStyleColor(ImGuiCol_Text, ImColor(IM_COL32(255,0,0,255)));
@@ -844,6 +813,12 @@ void emu_update()
 			gFramesToSim = 1;
 			gUpdateTargetAddress = true;
 		}
+		
+		if (ImGui::Button("Restart"))
+		{
+			pc = 0x200;
+			gUpdateTargetAddress = true;
+		}
 	}
 	ImGui::End();
 	
@@ -853,6 +828,7 @@ void emu_update()
 	// TODO: clock speed control - games which don't use the delay timer really need this (KALEID)
 	// TODO: edit memory - dependency on flow control being implemented
 	// TODO: fix issue with key input going to game while trying to use debug tools - check focus on game window
+	// TODO: Sound timer doesn't make sound
 	// TODO: Dockable windows
 	
 	ImGui::PopStyleColor();
