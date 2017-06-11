@@ -12,6 +12,7 @@ ushort pc = 0;
 byte screen[64*32] = {};
 
 bool keys[16] = {};
+bool keys2[16] = {};
 
 uchar DT = 0;
 uchar ST = 0;
@@ -541,11 +542,11 @@ bool emu_sim_step(int tick)
 		switch (subop)
 		{
 		case 0x9E:
-			if (keys[V[vx]])
+			if (keys[V[vx]] || keys2[V[vx]])
 				pc+=2;
 			break;
 		case 0xA1:
-			if (!keys[V[vx]])
+			if (!keys[V[vx]] && !keys2[V[vx]])
 				pc+=2;
 			break;
 		default:
@@ -569,7 +570,7 @@ bool emu_sim_step(int tick)
 			// LD Vx, K
 			for (byte i = 0 ; i < 0x10 ; ++i)
 			{
-				if (keys[i])
+				if (keys[i] || keys2[i])
 				{
 					V[vx] = i;
 					pc+=2;
@@ -658,22 +659,29 @@ void emu_update()
 	ImGuiIO& io = ImGui::GetIO();
 	if (display_has_focus)
 	{
-		keys[0x1] = io.KeysDown[GLFW_KEY_1];
-		keys[0x2] = io.KeysDown[GLFW_KEY_2];
-		keys[0x3] = io.KeysDown[GLFW_KEY_3];
-		keys[0xC] = io.KeysDown[GLFW_KEY_4];
-		keys[0x4] = io.KeysDown[GLFW_KEY_Q];
-		keys[0x5] = io.KeysDown[GLFW_KEY_W];
-		keys[0x6] = io.KeysDown[GLFW_KEY_E];
-		keys[0xD] = io.KeysDown[GLFW_KEY_R];
-		keys[0x7] = io.KeysDown[GLFW_KEY_A];
-		keys[0x8] = io.KeysDown[GLFW_KEY_S];
-		keys[0x9] = io.KeysDown[GLFW_KEY_D];
-		keys[0xE] = io.KeysDown[GLFW_KEY_F];
-		keys[0xA] = io.KeysDown[GLFW_KEY_Z];
-		keys[0x0] = io.KeysDown[GLFW_KEY_X];
-		keys[0xB] = io.KeysDown[GLFW_KEY_C];
-		keys[0xF] = io.KeysDown[GLFW_KEY_V];
+		keys2[0x1] = io.KeysDown[GLFW_KEY_1];
+		keys2[0x2] = io.KeysDown[GLFW_KEY_2];
+		keys2[0x3] = io.KeysDown[GLFW_KEY_3];
+		keys2[0xC] = io.KeysDown[GLFW_KEY_4];
+		keys2[0x4] = io.KeysDown[GLFW_KEY_Q];
+		keys2[0x5] = io.KeysDown[GLFW_KEY_W];
+		keys2[0x6] = io.KeysDown[GLFW_KEY_E];
+		keys2[0xD] = io.KeysDown[GLFW_KEY_R];
+		keys2[0x7] = io.KeysDown[GLFW_KEY_A];
+		keys2[0x8] = io.KeysDown[GLFW_KEY_S];
+		keys2[0x9] = io.KeysDown[GLFW_KEY_D];
+		keys2[0xE] = io.KeysDown[GLFW_KEY_F];
+		keys2[0xA] = io.KeysDown[GLFW_KEY_Z];
+		keys2[0x0] = io.KeysDown[GLFW_KEY_X];
+		keys2[0xB] = io.KeysDown[GLFW_KEY_C];
+		keys2[0xF] = io.KeysDown[GLFW_KEY_V];
+	}
+	else
+	{
+		for (int i = 0 ; i < 16 ; ++i)
+		{
+			keys2[i] = 0;
+		}
 	}
 	
 	ImGui::Begin("Keys", nullptr,
@@ -683,7 +691,7 @@ void emu_update()
 		
 		ImVec2 canvas_size = ImGui::GetContentRegionAvail();
 		#define KEY_BUTTON(key)	{										\
-			bool old_key_val = keys[0x##key];							\
+			bool old_key_val = keys2[0x##key];							\
 			if (old_key_val) 											\
 				ImGui::PushStyleColor(ImGuiCol_Button, 					\
 					ImColor(IM_COL32_WHITE));							\
@@ -826,8 +834,7 @@ void emu_update()
 	// ImGui::ShowTestWindow();
 	
 	// TODO: clock speed control - games which don't use the delay timer really need this (KALEID)
-	// TODO: edit memory - dependency on flow control being implemented
-	// TODO: fix issue with key input going to game while trying to use debug tools - check focus on game window
+	// TODO: memory view with editable values
 	// TODO: Sound timer doesn't make sound
 	// TODO: Dockable windows
 	

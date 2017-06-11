@@ -13,7 +13,6 @@ Runs all the ROMs I've tried, albeit with bugs and issues with the update rate b
 
 TODOs:
 * clock speed control - games which don't use the delay timer really need this (KALEID)
-* edit memory - dependency on flow control being implemented
-* fix issue with key input going to game while trying to use debug tools - check focus on game window
+* memory view with editable values
 * Sound timer doesn't make sound
 * Dockable windows
